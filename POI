@@ -1,0 +1,298 @@
+#!/usr/bin/env python
+# coding: utf-8
+
+# In[1]:
+
+
+from sklearn.pipeline import Pipeline
+from sklearn import svm
+from sklearn.grid_search import GridSearchCV
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.preprocessing import StandardScaler
+from sklearn.cross_validation import train_test_split
+from sklearn.feature_selection import SelectKBest
+from feature_format import featureFormat, targetFeatureSplit
+import pandas as pd
+import numpy as np
+import sys
+import pickle
+import tester
+import operator
+sys.path.append("../tools/")
+
+from feature_format import featureFormat, targetFeatureSplit
+from tester import dump_classifier_and_data
+
+
+# In[2]:
+
+
+with open("final_project_dataset.pkl", "rb") as data_file:
+    my_dataset = pickle.load(data_file)
+
+
+# In[3]:
+
+
+# read into dataframe
+df = pd.DataFrame.from_dict(my_dataset,orient='index')
+df = df.replace('NaN',np.nan)
+
+
+# In[4]:
+
+
+print(my_dataset)
+
+
+# In[5]:
+
+
+print(len(my_dataset))
+
+
+# In[6]:
+
+
+##create a variable so we can use it later with the total number of persons in the data set
+count_people=len(my_dataset)
+print 'Number of people in the Enron dataset is:', count_people
+
+##count of poi = true 
+poi_true = [x for x, y in my_dataset.items() if y['poi']]
+poi_count = len(poi_true)
+print 'Number of POIs: ', poi_count
+
+print ('Number of features: {0}'.format(len(list(my_dataset.values())[0])))
+
+print 'There are ', poi_count, 'persons of interest in this list of ', count_people, 'names.'
+
+
+# In[7]:
+
+
+##since the key appears to be the persons name, this will create a list of people/keys. 
+##This will help us look thorugh the keys and see if there are any odd values
+##this list will include the 146 names
+
+print(my_dataset.keys())
+
+
+# In[8]:
+
+
+##look at features provided, used Kenneth Lay due to the mention being a POI in the courses
+my_dataset['LAY KENNETH L']
+
+
+# In[9]:
+
+
+my_dataset['TOTAL']
+##This appears to be the totaled sum line
+
+
+# In[10]:
+
+
+my_dataset.pop('TOTAL')
+
+
+# In[11]:
+
+
+df = pd.DataFrame.from_dict(my_dataset,orient='index')
+df = df.replace('NaN',np.nan)
+df['name'] = df.index
+df = df.reset_index()
+df['index'] = df.index
+
+
+# In[12]:
+
+
+df[(df.salary > 1000000) | (df.bonus > 5000000)][['bonus','salary','poi','total_payments']]
+
+
+# In[13]:
+
+
+all = df.count()
+
+## features counts for the poi's
+pois = df[df['poi'] == 1].count()
+
+result = pd.concat([all, pois], axis=1)
+result.columns = ['All Records','POIs']
+result
+
+
+# In[14]:
+
+
+##some featueres have a large number of null values so those were removed from the list
+features_list = ['poi','to_messages', 'deferred_income',
+       'salary', 'total_stock_value', 'expenses', 'restricted_stock',
+       'from_poi_to_this_person', 'long_term_incentive',
+       'from_this_person_to_poi', 'total_payments', 'exercised_stock_options',
+       'other', 'from_messages', 'bonus', 'shared_receipt_with_poi']
+
+
+# In[15]:
+
+
+df['poi'] = df['poi'].apply(lambda x: 1 if x else 0)
+df = df.fillna('NaN')
+
+dataset = df.T.to_dict()
+
+
+# In[16]:
+
+
+def fraction(f1, f2):
+    '''Returns a ratio of two features, which are strings, if they aren't 
+    equal to NaN. Otherwise returns a 0.
+    '''
+    
+    if f1 != 'NaN'and f2 != 'NaN':
+        return f1/f2
+    
+    else:
+        return 0
+
+def nf(f1, f2, nf):
+    
+    for name in my_dataset:
+        my_dataset[name][nf] = fraction(my_dataset[name][f1], 
+                                              my_dataset[name][f2])
+    
+##this will show us the frequency in which the person emails a POI
+nf('from_this_person_to_poi', 'from_messages', 'to_fraction')
+
+##this will show us the frequency in which the POI emailed each person
+nf('from_poi_to_this_person', 'to_messages', 'from_fraction')
+
+
+##bonus to total payments
+nf('bonus', 'total_payments', 'bonus_to_tp')
+
+
+print my_dataset.values()[0].keys()
+
+
+# In[17]:
+
+
+new_feature_list = features_list + ['to_fraction', 'from_fraction', 'bonus_to_tp']
+print new_feature_list
+
+
+# In[18]:
+
+
+data = featureFormat(dataset, features_list, sort_keys = True)
+labels, features = targetFeatureSplit(data)
+
+
+# In[19]:
+
+
+## SVM Model
+from sklearn import svm
+svm = Pipeline([('scaler',StandardScaler()),('svm',svm.SVC())])
+param_grid = ([{'svm__C': [1,50,100,1000],
+                'svm__gamma': [0.5, 0.1, 0.01],
+                'svm__degree':[1,2],
+                'svm__kernel': ['rbf','poly']}])
+
+svm_clf = GridSearchCV(svm, param_grid, scoring='recall').fit(features, labels).best_estimator_
+
+tester.test_classifier(svm_clf, dataset, features_list)
+
+
+# In[20]:
+
+
+### Random Forests Model
+rfm = Pipeline([('scaler',StandardScaler()),('rf',RandomForestClassifier())])
+param_grid = ([{'rf__n_estimators': [4,5,7,8]}])
+rf_clf = GridSearchCV(rfm, param_grid, scoring='recall').fit(features, labels).best_estimator_
+
+tester.test_classifier(rf_clf, dataset, features_list)
+
+
+# In[21]:
+
+
+### K-Nearest Neighbours Model
+knb = Pipeline([('scaler', StandardScaler()),('knb', KNeighborsClassifier())])
+param_grid = ([{'knb__n_neighbors': [2,3,4,5,6,7]}])
+knb_clf = GridSearchCV(knb, param_grid, scoring='recall').fit(features, labels).best_estimator_
+
+tester.test_classifier(knb_clf, dataset, features_list)
+
+
+# In[22]:
+
+
+##svm = Pipeline([('scaler',StandardScaler()),("kbest", SelectKBest()),('svm',svm.SVC())])
+##param_grid = ([{'svm__C': [100],'svm__gamma': [0.1],'svm__degree':[2],'svm__kernel': ['poly'],'kbest__k':['all']}])
+##clf = GridSearchCV(svm, param_grid, scoring='recall').fit(features, labels).best_estimator_
+
+
+# In[23]:
+
+
+features_list = ['poi','to_messages', 'deferred_income',
+       'salary', 'total_stock_value', 'expenses', 'restricted_stock',
+       'from_poi_to_this_person', 'long_term_incentive',
+       'from_this_person_to_poi', 'total_payments', 'exercised_stock_options',
+       'other', 'from_messages', 'bonus', 'shared_receipt_with_poi'] 
+data = featureFormat(dataset, features_list, sort_keys = True)
+labels, features = targetFeatureSplit(data)
+feature_list = features_list[1:]
+
+
+# In[24]:
+
+
+
+from sklearn import svm
+
+svm = Pipeline([('scaler',StandardScaler()),("kbest", SelectKBest()),('svm',svm.SVC())])
+param_grid = ([{'svm__C': [100],'svm__gamma': [0.1],'svm__degree':[2],'svm__kernel': ['poly'],'kbest__k':['all']}])
+svm_clf = GridSearchCV(svm, param_grid, scoring='recall').fit(features, labels).best_estimator_
+
+tester.test_classifier(svm_clf, dataset, features_list)
+
+## show feature scores for final features
+feature_scores = sorted({feature_list[i]:svm_clf.get_params()['kbest'].scores_[i]
+                         for i in range(0,len(feature_list))}.items(), reverse=True, key=operator.itemgetter(1))
+feature_scores
+
+
+# In[26]:
+
+
+clf = svm_clf
+
+
+# In[27]:
+
+
+dump_classifier_and_data(clf, dataset, features_list)
+
+
+# In[28]:
+
+
+run tester.py
+
+
+# In[ ]:
+
+
+
+
