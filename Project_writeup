@@ -1,0 +1,175 @@
+Identify POI from Enron Emails
+
+
+Introduction: 
+Summarize for us the goal of this project and how machine learning is useful in trying to accomplish it. As part of your answer, give some background on the dataset and how it can be used to answer the project question. 
+
+
+
+
+In this project, we will explore the Enron dataset to identify persons of interest (POI). A person of interest will be identified by taking features of my choice and using an algorithm to test and evaluate these features. “In 2000, Enron was one of the largest companies in the United States. By 2002, it had collapsed into bankruptcy due to widespread corporate fraud. In the resulting Federal investigation, a significant amount of typically confidential information entered into the public record, including tens of thousands of emails and detailed financial data for top executives.” Our dataset is data made public from the Enron company investigation. This data includes salary information, emails to and from employees, bonus information, and other financial data. Machine learning is great for these types of projects because it can be used to identify features that can be classified and then making predictions based on the experience it had with the training data. 
+The objective of this project is for me to identify persons of interest, using this data as well as features that I add to the data in later steps. 
+
+
+
+
+Since the goal of this project is to identify POIs using machine learning algorithms, I'm going to start by looking at general questions I have about the data provided. 
+
+
+
+
+Questions to answer through the analysis of this data:
+How many people are on this dataset?
+How many are indicated as a POI?
+What features are provided in this dataset?
+What data is missing?
+What data should I remove (outliers) that might throw off the algorithms?
+Are their trends in the data from the ones indicated as POIs? (example do all POIs have larger than average salaries)
+What additional features could be calculated or created using this data?
+
+
+Data Overview:
+There were 146 people in the dataset. There were 18 POIs. There are 21 features included in the dataset. Some of the values are NaN; this will have to be addressed later. It may be missing data or this may be a 0. 
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Outliers:
+Outliers were Total and The Travel Agency in the Park. These values will be removed from the dataset. They were easy to identify due to the names. 
+
+
+
+
+  
+
+
+
+
+Feature Selection:
+Feature selection is used to reduce the number of input variables when developing a predictive model. This is important to not only reduce the computational cost but to improve the performance as well. Selection is based on those variables that have the strongest relationship with the target variable. This dataset included 21 features, some of these features were financial data points while others were communication counts of from poi and to poi as well as the poi label. Most of the features were numeric.  
+In my feature list I removed directors_fees, restricked_stock_deffered and others that were missing for a large number of individuals on the employee list. 
+To select the best features, I will use SelectKBest and Pipeline (as suggested by my reviewers) to help identify the best features to use in the algorithms.
+Pipeline fully automates the feature selection. 
+
+
+
+
+Engineered Features: 
+One of the suggestions in the forums was to create additional features so I engineered an additional feature. I created three of my own features. They are called to_fraction and from_fraction. These features I thought might be helpful since they would show us the number of emails to and from a poi compared to the total to and from emails.  The latest one was a bonus to total payments. My features improve the models performance so they were not used in the final model. 
+
+
+Classification Metrics:
+Precision and Recall are valuable tools in machine learning for evaluating models. 
+
+
+
+
+Precision in machine learning is the true positives divided by the total number of positives. This will give us an idea of the number of times an algorithm predicts the true positive. In our case that would be the number of persons that are correctly identified as POIs out of all persons.
+
+
+
+
+Recall is the true positives divided by the total of true positives and false negatives. In our case recall will tell us for all the POIs how many were correctly identified as being POIs.
+
+
+
+
+Algorithms:
+I originally tried three algorithms.  (Naive Bayes, Decision Tree, Random Forest) Naive Bayes performed the best on the features and the new features added to the data set, however was not performing well enough to pass this project, so I changed to SVM, Random Forest and K-Nearest Neighbours Model in an attempt to get the needed 0.3 precision and recall.  
+
+
+
+
+Model performance between algorithms:
+The new features did not seem to add any value so the grid below is just with the original best features.
+        
+Tuning the Parameters:
+
+
+
+
+“The grid search provided by GridSearchCV exhaustively generates candidates from a grid of parameter values specified with the param_grid parameter.” GridSearchCV is a generic approach to parameter search but it considers all parameter combinations and this is why I used this one. 
+
+
+
+
+Validation:
+Validation is the process in which we evaluate the model. The most common mistake when validating the model and dataset is not splitting the dataset. I used a process that split the data into 70/30. Leaving 30% for testing. 
+
+
+
+
+Conclusion:
+After changing to the SVM, RF and K-Nearest Neighbours Model, I finally achieved the 0.3 or greater with the SVM model. 
+
+
+The SVM has 0.4 precision and 0.3 recall upon running the tester.py. I think further engineering features could help with the performance of SVM and other models. 
+
+
+
+
+Model
+	Precision
+	Recall
+	SVM
+	0.4
+	0.3
+	Random Forest
+	0.34
+	0.19
+	K-Nearest Neighbours
+	0.47
+	0.05
+	
+
+Features used and scores:
+[('exercised_stock_options', 22.846900557039735),
+ ('total_stock_value', 22.334566139036529),
+ ('salary', 16.960916240556603),
+ ('bonus', 15.4914145509044),
+ ('restricted_stock', 8.6100114666718408),
+ ('total_payments', 8.5062385749366047),
+ ('shared_receipt_with_poi', 7.0633985713746013),
+ ('deferred_income', 6.1946652916933163),
+ ('long_term_incentive', 5.6633149245911412),
+ ('expenses', 5.2838455291937203),
+ ('from_poi_to_this_person', 5.0503691628537695),
+ ('other', 4.4218072883174111),
+ ('to_messages', 1.4869429249474853),
+ ('from_messages', 0.8114229919635324),
+ ('from_this_person_to_poi', 0.0078322292841794781)]
+
+
+
+
+References: 
+
+
+1. https://www.newtechdojo.com/list-machine-learning-algorithms/
+2. https://scikit-learn.org/stable/index.html
+3. https://www.datacamp.com/community/tutorials
+4. https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.loc.html
+5. https://www.geeksforgeeks.org/python-count-number-of-items-in-a-dictionary-value-that-is-a-list/
+6. https://github.com/udacity/ud120-projects/issues/147
+(to resolve error on the feature_format)
+7. https://datatofish.com/replace-nan-values-with-zeros/
+8. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.drop.html
+9. https://scikit-learn.org/stable/modules/generated/sklearn.feature_selection.SelectKBest.html
+10. https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.StandardScaler.html
+11. https://machinelearningmastery.com/difference-test-validation-datasets/
+12. https://www.datacamp.com/community/tutorials/naive-bayes-scikit-learn
+13.https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.GridSearchCV.html
+14. https://www.analyticsvidhya.com/blog/2020/09/precision-recall-machine-learning/
+15. https://machinelearningmastery.com/feature-selection-with-real-and-categorical-data/
+16. WGU Course Instructor : Pipeline and Feature Scoring
